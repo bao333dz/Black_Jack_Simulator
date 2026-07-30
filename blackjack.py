@@ -586,7 +586,7 @@ def bj(player, house, deck):
         for w in range(0, hands):
             wager.append(bet)
 
-        # Loop through the hands
+        # Loop through the hands for card counting
         for o in range(0, hands):
 
             # Counting player's cards
@@ -610,15 +610,15 @@ def bj(player, house, deck):
         if house[0] == 0 and true_count >= 3:
             insurance = True
 
-
-
-        # Black Jack cases
+        #===============================================================#
+        #=======================BLACK JACK CASES========================#
+        #===============================================================#
 
         if sum(house) == 10 and 10 in house:
             house_blackjack = True
 
             # Count the second card in dealer's hand
-            
+            run_count -= 1
 
         for b in range(0, hands):
             player_blackjack = False
@@ -634,154 +634,52 @@ def bj(player, house, deck):
                 else:
                     capital -= bet * 0.5
             
-            # Player got bj
+            # Player win bj
             if player_blackjack == True and house_blackjack == False:
                 capital += 1.5
                 player.pop(b)
                 player.append([])
+                wager.pop(b)
                 hands -= 1
 
-            
+            # Dealer win bj
+            if house_blackjack == True and player_blackjack == False:
+                capital -= 1
 
-            
-            
-            
-
-
-
-
-
-
-
-
-
-
-
-
-
-        # ======================================================================== #
-        # =====================SPECIAL CASE FOR SPLIT ACES======================== #
-        # ======================================================================== #
-        if len(splita) > 0:
-            # Calculate player point and store
-            suml, _, _ = handval(player)
-            finpoint.append(suml)
+        # Continue if dealer got bj
+        if house_blackjack == True:
             continue
 
-        else:
-            if splitace == True:
+            #===============================================================#
+            #=======================BLACK JACK CASES========================#
+            #===============================================================#
 
-                # House turn
-                house, run_count = hoturn(house, deck, run_count)
-                # Calculate dealer's hand
-                suml, _, _ = handval(house)
-                sumh = suml
+            
 
-                # Check all the hands 
-                while len(finpoint) > 0:
-                    capital, finpoint, wager = wl(finpoint, sumh, capital, wager)    
-                    continue
+            
+            
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # ======================================================================== #
+        # =====================SPECIAL CASE FOR SPLIT ACES======================== #
+        # ======================================================================== #
+        
         # ======================================================================== #
         # =====================SPECIAL CASE FOR SPLIT ACES======================== #
         # ======================================================================== #
 
-
-
-
-    
-        # Check if any split case if left
-        if any(split_queues):
-            splih = True
-
-
-
-
-        # Check illustrious (2 cards and no A)
-        if 0 not in player and len(player) == 2:# ----> If there are 2 cards hard hands can't have an A
-
-            double, stand, run_count = specstrat(player, house, deck, double, stand, run_count, remain_deck)
-
-            # Deciding win or lose (if double or stand or busted)
-            
-            if double == True or stand == True:
-                if double == True:
-                    bet = bet * 2
-                    wager[-1] = bet
-
-                # Calculate player point and store
-                suml, _, _ = handval(player)
-                finpoint.append(suml)
-
-                # If all split hands are done, dealer's turn 
-                if splih == False:
-                    house, run_count = hoturn(house, deck, run_count)
-    
-                    # Calculate dealer's hand
-                    suml, _, _ = handval(house)
-                    sumh = suml
-                
-                    while len(finpoint) > 0:
-                        capital, finpoint, wager = wl(finpoint, sumh, capital, wager)
-                
-            # Check basic strat
-            else:
-                busted, double, stand, run_count = basicstrat(player, deck, house, run_count, stand, double, remain_deck)
-
-                # Deciding win or lose (if double or stand or busted)
-
-                if busted == True:
-                    capital -= wager[-1]
-                    wager.pop(-1)
-
-                if double == True or stand == True:
-                    if double == True:
-                        bet = bet * 2
-                        wager[-1] = bet
-
-                    # Calculate player point and store
-                    suml, _, _ = handval(player)
-                    finpoint.append(suml)
-
-                    # If all split hands are done, dealer's turn 
-                    if splih == False:
-                        house, run_count = hoturn(house, deck, run_count)
-
-                        # Calculate dealer's hand
-                        suml, _, _ = handval(house)
-                        sumh = suml
-
-                        while len(finpoint) > 0:
-                            capital, finpoint, wager = wl(finpoint, sumh, capital, wager)
-        
-        # Check basic strat (2 cards and soft hand)
-        else:
-            busted, double, stand, run_count = basicstrat(player, deck, house, run_count, stand, double, remain_deck)
-
-            # Deciding win or lose (if double or stand or busted)
-            if busted == True:
-                capital -= wager[-1]
-                wager.pop(-1)
-
-        
-            if double == True or stand == True:
-                if double == True:
-                    bet = bet * 2
-                    wager[-1] = bet
-
-                # Calculate player point and store
-                suml, _, _ = handval(player)
-                finpoint.append(suml)
-
-                # If all split hands are done, dealer's turn
-                if splih == False:
-                    house, run_count = hoturn(house, deck, run_count)
-
-                    # Calculate dealer's hand
-                    suml, _, _ = handval(house)
-                    sumh = suml
-                
-                    while len(finpoint) > 0:
-                        capital, finpoint, wager = wl(finpoint, sumh, capital, wager)
         
         # Calculate pnl
         if rounds % 5 == 0:
