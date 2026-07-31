@@ -29,19 +29,17 @@ def split(player, deck, hands):
 
     return hands, player
 
-
 # Calculate the value of the cards
-def handval(lists):
-    hard = False
-    soft = False
-    i = lists.count(0)
+def handval(m, player, hs, finpoint):
+    i = player[m].count(0)
 
-    suml = sum(lists)
+    suml = sum(player[m])
     
     # If no A
     if i == 0:
-        hard = True
-        return suml, hard, soft
+        finpoint.append(suml)
+        hs.append("hard")
+        return finpoint, hs
     
     # If only 1 A
     elif i == 1:
@@ -49,14 +47,16 @@ def handval(lists):
         # Hard
         if suml + 11 > 21:
             suml += 1
-            hard = True
-            return suml, hard, soft
+            finpoint.append(suml)
+            hs.append("hard")
+            return finpoint, hs
         
         # Soft
         else:
             suml += 11
-            soft = True
-            return suml, hard, soft
+            finpoint.append(suml)
+            hs.append("soft")
+            return finpoint, hs
         
     # If more than 1 A
     else:
@@ -64,14 +64,16 @@ def handval(lists):
         # Soft
         if suml + 11 + (i - 1) <= 21:
             suml += 11 + (i - 1)
-            soft = True
-            return suml, hard, soft
+            finpoint.append(suml)
+            hs.append("soft")
+            return finpoint, hs
         
         # Hard
         else:
             suml += i
-            hard = True
-            return suml, hard, soft
+            finpoint.append(suml)
+            hs.append("hard")
+            return finpoint, hs
         
 # Take one card
 def one(player, deck, run_count):
@@ -480,6 +482,42 @@ def hoturn(house, deck, run_count):
         else:
             run_count = one(house, deck, run_count)
 
+# Calculate val of dealer's cards
+def hocal(house):
+    i = house.count(0)
+    
+    sumh = sum(house)
+    
+    # If no A
+    if i == 0:
+        return sumh
+    
+    # If only 1 A
+    elif i == 1:
+
+        # Hard
+        if sumh + 11 > 21:
+            sumh += 1
+            return sumh
+        
+        # Soft
+        else:
+            sumh += 11
+            return sumh
+        
+    # If more than 1 A
+    else:
+
+        # Soft
+        if sumh + 11 + (i - 1) <= 21:
+            sumh += 11 + (i - 1)
+            return sumh
+        
+        # Hard
+        else:
+            sumh += i
+            return sumh
+
 # Main
 def bj(player, house, deck):
     pnl = 0
@@ -509,6 +547,7 @@ def bj(player, house, deck):
         hands = 1
         wager = []
         finpoint = []
+        hs = []
 
         # Reload the deck
         if len(deck) <= 36:
@@ -650,36 +689,59 @@ def bj(player, house, deck):
         if house_blackjack == True:
             continue
 
-            #===============================================================#
-            #=======================BLACK JACK CASES========================#
-            #===============================================================#
-
-            
-
-            
-            
-            
-
-
-
-
-
-
-
-
-
-
-
-
-
-        # ======================================================================== #
-        # =====================SPECIAL CASE FOR SPLIT ACES======================== #
-        # ======================================================================== #
+        #===============================================================#
+        #=======================BLACK JACK CASES========================#
+        #===============================================================#
         
-        # ======================================================================== #
-        # =====================SPECIAL CASE FOR SPLIT ACES======================== #
-        # ======================================================================== #
 
+
+
+
+
+
+        # Calculate and check if hand hard or soft
+        for m in range(0, hands):
+            finpoint, hs = handval(m, player, hs, finpoint)
+
+
+        # If split aces case
+        if splitace == True:
+
+            # House turn
+            house, run_count = hoturn(house, deck, run_count)
+            sumh = hocal(house)
+
+            for a in range(0, hands):
+
+                # Tie
+                if finpoint[a] == sumh:
+                    player.pop(0)
+                    wager.pop(0)
+                    finpoint.pop(0)
+                    hands -= 1
+
+                # Player win
+                if finpoint[a] > sumh and finpoint[a] <= 21:
+                    capital += wager[0]
+                    player.pop(0)
+                    wager.pop(0)
+                    finpoint.pop(0)
+                    hands -= 1
+
+                # House win
+                if finpoint[a] < sumh and sumh <= 21:
+                    capital += wager[0]
+                    player.pop(0)
+                    wager.pop(0)
+                    finpoint.pop(0)
+                    hands -= 1
+            continue
+
+
+
+
+
+        
         
         # Calculate pnl
         if rounds % 5 == 0:
