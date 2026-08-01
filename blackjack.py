@@ -975,7 +975,7 @@ def bj (deck):
     plt.fill_between(x_rounds, y_pnl, 0, where=[v <= 0 for v in y_pnl], color="red", alpha=0.3, interpolate=True)
 
     plt.axhline(y = 0, color = "gray")
-    plt.text(x = max_round * 0.97, y = pnl - 40, s = f"{pnl:.2f}", color = "dimgray", fontsize = 9)
+    plt.text(x = max_round + 100, y = pnl - 60, s = f"{pnl:.2f}", color = "dimgray", fontsize = 9)
     plt.plot(max_round, pnl, marker = "o", markersize = 2, color ="red")
 
     plt.title("PnL Tracking")
