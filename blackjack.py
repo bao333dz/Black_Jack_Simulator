@@ -500,7 +500,7 @@ def basicstrat(player, deck, house, run_count, stand, double, finpoint, hs, t):
 def wl(finpoint, sumh, capital, wager, t):
 
     # Tie
-    if finpoint[t] == sumh and finpoint[t] <= 21 and sumh <= 21:
+    if (finpoint[t] == sumh and finpoint[t] <= 21 and sumh <= 21) or (finpoint[t] > 21 and sumh > 21):
         return capital
 
     # House win
@@ -515,12 +515,6 @@ def wl(finpoint, sumh, capital, wager, t):
 
 # House turn
 def hoturn(house, deck, run_count):
-
-    # Count second card
-    if house[1] in range(2, 7):
-        run_count += 1
-    if house[1] in (0, 10):
-        run_count -= 1
 
     while True:
         sumh = hocal(house)
@@ -589,7 +583,7 @@ def bj (deck):
     run_count = 0
     true_count = 0
 
-    for i in range(3000):
+    for i in range(100000):
 
         # Variables that need reset every round
         busted = False
@@ -605,6 +599,8 @@ def bj (deck):
         wager = [0,0,0,0]
         finpoint = [0,0,0,0]
         hs = [0,0,0,0]
+        insco = 0
+        bustcount = 0
 
         # Reload the deck
         if len(deck) <= 36:
@@ -620,9 +616,38 @@ def bj (deck):
             y_pnl.append(pnl)
             break
 
-        #================================================================#
-        #======================DEALING AND SPLITTING=====================#
-        #================================================================#
+
+
+
+        # FIRST THING HAPPEN: DETERMINE THE BET
+        #########################################################
+
+        remain_deck = len(deck) / 52
+        true_count = run_count / remain_deck
+
+        # Adjusting the risk (suggested by Claude-chan)
+        risk = 0.001
+        if true_count >= 2 and true_count < 3:
+            risk = risk * 1.9
+        elif true_count >= 3 and true_count < 4:
+            risk = risk * 3.8
+        elif true_count >= 4 and true_count < 5:
+            risk = risk * 5.7
+        elif true_count >= 5 and true_count < 6:
+            risk = risk * 7.6
+        elif true_count >= 6:
+            risk = risk * 9.5
+
+        # Calculate the size 
+        bet = capital * risk
+        ##########################################################
+
+
+
+
+        
+        # SECOND THING HAPPEN: DEALER DEAL CARDS
+        ###########################################################
 
         # Normal deal
         for c in range(2):
@@ -634,6 +659,105 @@ def bj (deck):
             house.append(h)
         rounds += 1
 
+        # Counting dealer's cards
+        if house[0] in range (2,7):
+            run_count += 1
+        elif house[0] in (0,10):
+            run_count -= 1
+        ############################################################
+
+
+
+
+
+
+
+        # THIRD THING HAPPEN (PROLLY): DEALER PEEK, IF GOT BLACKJACK, MATCH END
+        ########################################################################
+
+        # If first card is A, insurance option
+        if house[0] == 0:
+
+            remain_deck = len(deck) / 52
+            insco = run_count
+
+            # Insurance count
+            for f in range(2):
+                if player[0][f] in range (2,7):
+                    insco += 1
+                elif player[0][f] in (0,10):
+                    insco -= 1
+
+            true_count = insco / remain_deck
+
+            if true_count >= 3:
+                insurance = True
+
+        # Check for dealer's blackjack
+        if sum(house) == 10 and 10 in house:
+
+            # Count the second card in dealer's hand
+            run_count -= 1
+
+            # Count player's card
+            for f in range(2):
+                if player[0][f] in range (2,7):
+                    run_count += 1
+                elif player[0][f] in (0,10):
+                    run_count -= 1
+
+            # Insurance cases
+            if insurance == True:
+                capital += bet
+                    
+
+            # Check if player got a blackjack or not
+            if sum(player[0]) == 10 and 10 in player[0]:
+                # Calculate pnl
+                pnl = capital - 1000
+                x_rounds.append(rounds)
+                y_pnl.append(pnl)
+                continue
+            else:
+                capital -= bet
+                # Calculate pnl
+                pnl = capital - 1000
+                x_rounds.append(rounds)
+                y_pnl.append(pnl)
+                continue
+
+        # Player got blackjack dealer don't
+        else:
+            if insurance == True:
+                capital -= bet * 0.5
+
+            if sum(player[0]) == 10 and 10 in player[0]:
+
+                # Count the second card in dealer's hand
+                if house[1] in range (2,7):
+                    run_count += 1
+                elif house[1] in (0,10):
+                    run_count -= 1
+    
+                # Count player's card
+                for f in range(2):
+                    if player[0][f] in range (2,7):
+                        run_count += 1
+                    elif player[0][f] in (0,10):
+                        run_count -= 1
+                capital += bet * 1.5
+                # Calculate pnl
+                pnl = capital - 1000
+                x_rounds.append(rounds)
+                y_pnl.append(pnl)
+                continue
+        ########################################################################
+
+
+
+        # FOURTH THING HAPPEN: SPLIT THE CARDS
+        ########################################################################
+        
         if player[0][0] == player[0][1]:
 
             # A and 8
@@ -657,27 +781,14 @@ def bj (deck):
             # 4
             if player[0][0] == 4 and house[0] in (5,6):
                 hands, player = split(player, deck, hands)
-
-        #================================================================#
-        #======================DEALING AND SPLITTING=====================#
-        #================================================================#
+        ########################################################################
 
 
-        # Adjusting the risk (suggested by Gemini)
-        risk = 0.01
-        if true_count < 0:
-            risk = 0.005
-        elif true_count >= 2 and true_count < 3:
-            risk = risk * 2
-        elif true_count >= 3 and true_count < 4:
-            risk = risk * 4
-        elif true_count >= 4 and true_count < 5:
-            risk = risk * 8
-        elif true_count >= 5:
-            risk = risk * 12
 
-        # Calculate the size 
-        bet = capital * risk
+
+
+        # FIFTH THING HAPPEN: SOME STUFF
+        #######################################################################
 
         # Place the wager(s)
         for w in range(0, len(player)):
@@ -694,88 +805,50 @@ def bj (deck):
                 elif player[o][k] in (0,10):
                     run_count -= 1
 
-        # Counting dealer's cards
-        if house[0] in range (2,7):
-            run_count += 1
-        elif house[0] in (0,10):
-            run_count -= 1
-
-        # Calculate true count for insurance
-        remain_deck = len(deck) / 52
-        true_count = run_count / remain_deck
-        
-        # Insurance (first case in illustrious 18)
-        if house[0] == 0 and true_count >= 3:
-            insurance = True
-
-        # Check for dealer's blackjack
-        if sum(house) == 10 and 10 in house:
-            house_blackjack = True
-            # Count the second card in dealer's hand
-            run_count -= 1
-
-        # Insurance cases
-        if insurance == True:
-            if house_blackjack == True:
-                capital += bet
-            else:
-                capital -= bet * 0.5
-
         # Calculate hand
         for m in range(0, len(player)):
             if len(player[m]) > 0:
                 finpoint, hs = handval(m, player, hs, finpoint)
+        ########################################################################
+
+
+
+
+
+        # SIXTH THING HAPPEN (PROLLY): SPLIT ACE CASE
+        #######################################################################
 
         # If split aces case
         if splitace == True:
             
-            # Instantly lose all if dealer have a blackjack
-            if house_blackjack == True:
-                capital -= bet * hands
-                continue
-
             # House turn
             house, run_count = hoturn(house, deck, run_count)
             sumh = hocal(house)
+            # Count second card
+            if house[1] in range(2, 7):
+                run_count += 1
+            if house[1] in (0, 10):
+                run_count -= 1
 
             for a in range(0, len(player)):
 
                 if len(player[a]) > 0: 
                     capital = wl(finpoint, sumh, capital, wager, a)
-                    
+
+            # Calculate pnl
+            pnl = capital - 1000
+            x_rounds.append(rounds)
+            y_pnl.append(pnl)
             continue
+        #######################################################################
 
-        #===============================================================#
-        #=======================BLACK JACK CASES========================#
-        #===============================================================#
 
-        for b in range(0, len(player)):
-            if len(player[b]) > 0:
-                player_blackjack = False
 
-                # Check if hand bj or not
-                if sum(player[b]) == 10 and 10 in player[b]:
-                    player_blackjack = True
-                
-                # Player win bj
-                if player_blackjack == True and house_blackjack == False:
-                    capital += wager[b] * 1.5 
-                    player[b] = []
 
-                # Dealer win bj
-                if house_blackjack == True and player_blackjack == False:
-                    capital -= wager[b]
 
-        # End of round if dealer got bj
-        if house_blackjack == True:
-            continue
 
-        #===============================================================#
-        #=======================BLACK JACK CASES========================#
-        #===============================================================#
-        
-
-    
+        # SEVENTH THING HAPPEN: MAIN ACTION FOR PLAYER
+        #######################################################################
 
 
 
@@ -800,12 +873,6 @@ def bj (deck):
                         # Calculate player's hand
                         finpoint, hs = handval(t, player, hs, finpoint)
 
-                        # House turn
-                        house, run_count = hoturn(house, deck, run_count)
-                        sumh = hocal(house)
-
-                        # Decide win or lose
-                        capital = wl(finpoint, sumh, capital, wager, t)
 
                     else:
 
@@ -817,6 +884,9 @@ def bj (deck):
                         # Busted
                         if busted == True:
                             capital -= wager[t]
+                            player[t] = []
+                            bustcount += 1
+                            continue
 
                         # Double or stand
                         if double == True or stand == True:
@@ -828,12 +898,6 @@ def bj (deck):
                             # Calculate player's hand
                             finpoint, hs = handval(t, player, hs, finpoint)
 
-                            # House turn
-                            house, run_count = hoturn(house, deck, run_count)
-                            sumh = hocal(house)
-
-                            # Decide win or lose
-                            capital = wl(finpoint, sumh, capital, wager, t)
                 else:
                 
                     # Check basic strat
@@ -844,6 +908,9 @@ def bj (deck):
                     # Busted
                     if busted == True:
                         capital -= wager[t]
+                        player[t] = []
+                        bustcount += 1
+                        continue
 
                     # Double or stand
                     if double == True or stand == True:
@@ -854,20 +921,46 @@ def bj (deck):
                         
                         # Calculate player's hand
                         finpoint, hs = handval(t, player, hs, finpoint)
+        ##################################################################################
 
-                        # House turn
-                        house, run_count = hoturn(house, deck, run_count)
-                        sumh = hocal(house)
 
-                        # Decide win or lose
-                        capital = wl(finpoint, sumh, capital, wager, t)
+
+
+
+        # EIGHTH THING HAPPEN: DEALER'S TURN
+        #################################################################################
+
+        # Count second card
+        if house[1] in range(2, 7):
+            run_count += 1
+        if house[1] in (0, 10):
+            run_count -= 1
+
+        # Dealer's turn
+        if bustcount < hands:
+            house, run_count = hoturn(house, deck, run_count)
+            sumh = hocal(house)
+        ##################################################################################
+
+
+
+
+
+        # NINTH THING HAPPEN: NOW WE WRAP IT UPPP
+        ##################################################################################
+
+        # Loop to check if win or lose
+        for l in range(0, len(player)):
+            if len(player[l]) > 0:
+                capital = wl(finpoint, sumh, capital, wager, l)
+        ##################################################################################
 
         
         # Calculate pnl
-        if rounds % 5 == 0:
-            pnl = capital - 1000
-            x_rounds.append(rounds)
-            y_pnl.append(pnl)
+        pnl = capital - 1000
+        x_rounds.append(rounds)
+        y_pnl.append(pnl)
+        
 
     max_round = x_rounds[-1]
     pnl = y_pnl[-1]
