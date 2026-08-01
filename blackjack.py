@@ -6,9 +6,6 @@ import matplotlib.pyplot as plt
 base = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10] # 0 is A and the 3 10s stand for JQK
 deck = base * 4 * 6
 
-player = []
-house = []
-
 # Split
 def split(player, deck, hands):
     pending = 0
@@ -17,15 +14,18 @@ def split(player, deck, hands):
         if len(player[i]) == 0 and pending > 0:
             player[i].append(player[i-1][0])
             p = random.choice(deck)
+            deck.remove(p)
             player[i].append(p)
             pending -= 1
 
-        while player[i][0] == player[i][0] and hands < 4 and pending < 3:
-            player[i].pop(1)
-            p = random.choice(deck)
-            player[i].append(p)
-            hands += 1
-            pending += 1
+        if len(player[i]):  
+            while player[i][0] == player[i][1] and hands < 4 and pending < 3:
+                player[i].pop(1)
+                p = random.choice(deck)
+                deck.remove(p)
+                player[i].append(p)
+                hands += 1
+                pending += 1
 
     return hands, player
 
@@ -37,8 +37,8 @@ def handval(m, player, hs, finpoint):
     
     # If no A
     if i == 0:
-        finpoint.append(suml)
-        hs.append("hard")
+        finpoint[m] = suml
+        hs[m] = "hard"
         return finpoint, hs
     
     # If only 1 A
@@ -47,15 +47,15 @@ def handval(m, player, hs, finpoint):
         # Hard
         if suml + 11 > 21:
             suml += 1
-            finpoint.append(suml)
-            hs.append("hard")
+            finpoint[m] = suml
+            hs[m] = "hard"
             return finpoint, hs
         
         # Soft
         else:
             suml += 11
-            finpoint.append(suml)
-            hs.append("soft")
+            finpoint[m] = suml
+            hs[m] = "soft"
             return finpoint, hs
         
     # If more than 1 A
@@ -64,151 +64,142 @@ def handval(m, player, hs, finpoint):
         # Soft
         if suml + 11 + (i - 1) <= 21:
             suml += 11 + (i - 1)
-            finpoint.append(suml)
-            hs.append("soft")
+            finpoint[m] = suml
+            hs[m] = "soft"
             return finpoint, hs
         
         # Hard
         else:
             suml += i
-            finpoint.append(suml)
-            hs.append("hard")
+            finpoint[m] = suml
+            hs[m] = "hard"
             return finpoint, hs
         
 # Take one card
-def one(player, deck, run_count):
+def one(player, deck, run_count, t):
     p = random.choice(deck)
     deck.remove(p)
-    player.append(p)
+    player[t].append(p)
     if p in range(2,7):
         run_count += 1
     if p in (0,10):
         run_count -= 1
-    return run_count
+    return player, run_count
  
 # Illustrious 18 (excluding the insurance case)
-def specstrat(player, house, deck, double, stand, run_count, remain_deck):
+def specstrat(player, house, deck, double, stand, run_count, finpoint, t):
     
-
-    # Calculate the ace
-    if 0 in player:
-        numA = player.count(0)
-        sumpl = sum(player) + 1 * numA
-
-    # If no ace
-    else:
-        sumpl = sum(player)
     # Calculate true count
     remain_deck = len(deck) / 52
     true_count = run_count / remain_deck
 
     # Player 10 and House 10 or House A (double)
-    if sumpl == 10 and true_count >= 4 and (house[0] in (0,10)) and len(player) == 2:
-        run_count = one(player, deck, run_count)
+    if finpoint[t] == 10 and true_count >= 4 and (house[0] in (0,10)) and len(player[t]) == 2:
+        player, run_count = one(player, deck, run_count, t)
         double = True
-        return double, stand, run_count
+        return double, stand, run_count, player
 
     # Player 16
-    if sumpl == 16:
+    if finpoint[t] == 16:
 
         # 10 - 6
-        if 10 in player and len(player) == 2:
+        if 10 in player[t] and len(player[t]) == 2:
 
             # House 10 (stand)
             if house[0] == 10 and true_count >= 0:
                 stand = True
-                return double, stand, run_count
+                return double, stand, run_count, player
 
         # House 9 (stand)
         if house[0] == 9 and true_count >= 5:
             stand = True
-            return double, stand, run_count
+            return double, stand, run_count, player
                 
     # Player 15
-    if sumpl == 15:
+    if finpoint[t] == 15:
 
         # House 10 (stand)
         if house[0] == 10 and true_count >= 4:
             stand = True
-            return double, stand, run_count
+            return double, stand, run_count, player
             
         # House 9 (stand)
         if house[0] == 9 and true_count >= 2:
             stand = True
-            return double, stand, run_count
+            return double, stand, run_count, player
     
     # Player 14 and House 10 (stand)
-    if sumpl == 14 and house[0] == 10 and true_count >= 3:
+    if finpoint[t] == 14 and house[0] == 10 and true_count >= 3:
         stand = True
-        return double, stand, run_count
+        return double, stand, run_count, player
         
     # Player 13
-    if sumpl == 13:
+    if finpoint[t] == 13:
 
         # House 2 (hit)
         if house[0] == 2 and true_count < -1:
-            run_count = one(player, deck, run_count)
-            return double, stand, run_count
+            player, run_count = one(player, deck, run_count, t)
+            return double, stand, run_count, player
 
         # House 3 (hit)
         if house[0] == 3 and true_count < -2:
-            run_count = one(player, deck, run_count)
-            return double, stand, run_count
+            player, run_count = one(player, deck, run_count, t)
+            return double, stand, run_count, player
     
     # Player 12
-    if sumpl == 12:
+    if finpoint[t] == 12:
 
         # House 3 (stand)
         if house[0] == 3 and true_count >= 2:
             stand = True
-            return double, stand, run_count
+            return double, stand, run_count, player
             
         # House 2 (stand)
         if house[0] == 2 and true_count >= 3:
             stand = True
-            return double, stand, run_count
+            return double, stand, run_count, player
         
         # House 4 (hit)
         if house[0] == 4 and true_count < 0:
-            run_count = one(player, deck, run_count)
-            return double, stand, run_count
+            player, run_count = one(player, deck, run_count, t)
+            return double, stand, run_count, player
             
         # House 5 (hit)
         if house[0] == 5 and true_count < -2:
-            run_count = one(player, deck, run_count)
-            return double, stand, run_count
+            player, run_count = one(player, deck, run_count, t)
+            return double, stand, run_count, player
 
         # House 6 (hit)
         if house[0] == 6 and true_count < -1:
-            run_count = one(player, deck, run_count)
-            return double, stand, run_count
+            player, run_count = one(player, deck, run_count, t)
+            return double, stand, run_count, player
 
     # Player 11 and House A (double)
-    if sumpl == 11 and house[0] == 0 and len(player) == 2:
+    if finpoint[t] == 11 and house[0] == 0 and len(player[t]) == 2:
         if true_count >= 1:
-            run_count = one(player, deck, run_count)
+            player, run_count = one(player, deck, run_count, t)
             double = True
-            return double, stand, run_count
+            return double, stand, run_count, player
 
     # Player 9
-    if sumpl == 9:
+    if finpoint[t] == 9:
 
         # House 2 (double)
-        if house[0] == 2 and true_count >= 1 and len(player) == 2:
-            run_count = one(player, deck, run_count)
+        if house[0] == 2 and true_count >= 1 and len(player[t]) == 2:
+            player, run_count = one(player, deck, run_count, t)
             double = True
-            return double, stand, run_count
+            return double, stand, run_count, player
 
         # House 7 (double)
-        if house[0] == 7 and true_count >= 3 and len(player) == 2:
-            run_count = one(player, deck, run_count)
+        if house[0] == 7 and true_count >= 3 and len(player[t]) == 2:
+            player, run_count = one(player, deck, run_count, t)
             double = True
-            return double, stand, run_count
+            return double, stand, run_count, player
 
-    return double, stand, run_count
+    return double, stand, run_count, player
 
 # Basic Strategy 
-def basicstrat(player, deck, house, run_count, stand, double, remain_deck):
+def basicstrat(player, deck, house, run_count, stand, double, finpoint, hs, t):
 
     busted = False
 
@@ -216,271 +207,339 @@ def basicstrat(player, deck, house, run_count, stand, double, remain_deck):
     while True:
         
         # Calculate the hand and determine if it hard or soft
-        suml, hard, soft = handval(player)
+        finpoint, hs = handval(t, player, hs, finpoint)
 
         # Cases for hard hands
-        if hard == True:
+        if hs[t] == "hard":
 
             # Player over 22
-            if suml > 21:
+            if finpoint[t] > 21:
                 busted = True
-                return busted, double, stand, run_count
+                return busted, double, stand, run_count, player
 
             # Player 17 - 21 (stand)
-            if suml in range(17,22):
+            if finpoint[t] in range(17,22):
                 stand = True
-                return busted, double, stand, run_count
+                return busted, double, stand, run_count, player
             
             # Player 13 - 16
-            if suml in range(13,17):
+            if finpoint[t] in range(13,17):
 
                 # House 2 - 6
                 if house[0] in range(2,7):
 
-                    # Store the len 
-                    bf = len(player)
+                    # Store the len to see if anything happen or not
+                    bf = len(player[t])
 
                     # Checking illustrious
-                    double, stand, run_count = specstrat(player, house, deck, double, stand, run_count, remain_deck)
+                    double, stand, run_count, player = specstrat(player, house, deck, double, stand, run_count, finpoint, t)
 
                     # Hit
-                    if len(player) != bf:
+                    if len(player[t]) != bf:
                         continue
 
                     # Nothing happen case (stand)
                     else:
                         stand = True
-                        return busted, double, stand, run_count
-                
-            
+                        return busted, double, stand, run_count, player
                 
                 # House 7 - A
                 else:
 
                     # Checking illustrious
-                    double, stand, run_count = specstrat(player, house, deck, double, stand, run_count, remain_deck)
+                    double, stand, run_count, player = specstrat(player, house, deck, double, stand, run_count, finpoint, t)
 
                     # Stand
                     if stand == True:
-                        return busted, double, stand, run_count
+                        return busted, double, stand, run_count, player
 
                     # Nothing happen case (hit)
                     else:
-                        run_count = one(player, deck, run_count)
+                        player, run_count = one(player, deck, run_count, t)
                         continue
                 
             # Player 12
-            if suml == 12:
+            if finpoint[t] == 12:
 
                 # House 4,5,6
                 if house[0] in range(4,7):
                     # Store the len 
-                    bf = len(player)
+                    bf = len(player[t])
 
                     # Checking illustrious
-                    double, stand, run_count = specstrat(player, house, deck, double, stand, run_count, remain_deck)
+                    double, stand, run_count, player = specstrat(player, house, deck, double, stand, run_count, finpoint, t)
 
                     # Hit
-                    if len(player) != bf:
+                    if len(player[t]) != bf:
                         continue
 
                     # Nothing happen case (stand)
                     else:
                         stand = True
-                        return busted, double, stand, run_count
+                        return busted, double, stand, run_count, player
             
                 # House 2 - 3 or 7 - A (hit)
                 else:
 
                     # Checking illustrious
-                    double, stand, run_count = specstrat(player, house, deck, double, stand, run_count, remain_deck)
+                    double, stand, run_count, player = specstrat(player, house, deck, double, stand, run_count, finpoint, t)
 
                     # Stand
                     if stand == True:
-                        return busted, double, stand, run_count
+                        return busted, double, stand, run_count, player
 
                     # Nothing happen case (hit)
                     else:
-                        run_count = one(player, deck, run_count)
+                        player, run_count = one(player, deck, run_count, t)
                         continue
 
 
             # Player 11
-            if suml == 11:
+            if finpoint[t] == 11:
 
-                # House 2 - 10 (double)
-                if house[0] in range(2,11) and len(player) == 2:
-                    run_count = one(player,deck, run_count)
-                    double = True
-                    return busted, double, stand, run_count
-                
+                # House 2 - 10
+                if house[0] in range(2,11):
+
+                    # Double if allowed
+                    if len(player[t]) == 2:
+                        player, run_count = one(player, deck, run_count, t)
+                        double = True
+                        return busted, double, stand, run_count, player
+
+                    # Hit
+                    else:
+                        player, run_count = one(player, deck, run_count, t)
+                        continue
+
                 # House A
                 else:
 
                     # Checking illustrious
-                    double, stand, run_count = specstrat(player, house, deck, double, stand, run_count, remain_deck)
+                    double, stand, run_count, player = specstrat(player, house, deck, double, stand, run_count, finpoint, t)
 
                     # Double
                     if double == True:
-                        return busted, double, stand, run_count
+                        return busted, double, stand, run_count, player
 
                     # Nothing happedn (hit)
                     else:
-                        run_count = one(player, deck, run_count)
+                        player, run_count = one(player, deck, run_count, t)
                         continue
             
             # Player 10
-            if suml == 10:
+            if finpoint[t] == 10:
                 
                 # House 2 - 9 (double)
-                if house[0] in range(2,10) and len(player) == 2:
-                    run_count = one(player,deck, run_count)
-                    double = True
-                    return busted, double, stand, run_count
+                if house[0] in range(2,10):
+                
+                    # Double if allowed
+                    if len(player[t]) == 2:
+                        player, run_count = one(player, deck, run_count, t)
+                        double = True
+                        return busted, double, stand, run_count, player
+
+                    # Hit
+                    else:
+                        player, run_count = one(player, deck, run_count, t)
+                        continue
 
                 # House 10 or A
                 else:
 
                     # Checking illustrious
-                    double, stand, run_count = specstrat(player, house, deck, double, stand, run_count, remain_deck)
+                    double, stand, run_count, player = specstrat(player, house, deck, double, stand, run_count, finpoint, t)
 
                     # Double
                     if double == True:
-                        return busted, double, stand, run_count
+                        return busted, double, stand, run_count, player
 
                     # Nothing happedn (hit)
                     else:
-                        run_count = one(player, deck, run_count)
+                        player, run_count = one(player, deck, run_count, t)
                         continue
             
             # Player 9
-            if suml == 9:
+            if finpoint[t] == 9:
 
                 # House 3 - 6 (double)
-                if house[0] in range(3,7) and len(player) == 2:
-                    run_count = one(player,deck, run_count)
-                    double = True
-                    return busted, double, stand, run_count
+                if house[0] in range(3, 7):
+                                
+                    # Double if allowed
+                    if len(player[t]) == 2:
+                        player, run_count = one(player, deck, run_count, t)
+                        double = True
+                        return busted, double, stand, run_count, player
+
+                    # Hit
+                    else:
+                        player, run_count = one(player, deck, run_count, t)
+                        continue
                 
                 # House 2 or 7 - A
                 else:
 
                     # Checking illustrious
-                    double, stand, run_count = specstrat(player, house, deck, double, stand, run_count, remain_deck)
+                    double, stand, run_count, player = specstrat(player, house, deck, double, stand, run_count, finpoint, t)
 
                     # Double
                     if double == True:
-                        return busted, double, stand, run_count
+                        return busted, double, stand, run_count, player
 
                     # Nothing happen case (hit)
                     else:
-                        run_count = one(player, deck, run_count)
+                        player, run_count = one(player, deck, run_count, t)
                         continue
             
-            # Player 5 - 8 (hit)
-            if suml in range(5,9):
-                run_count = one(player, deck, run_count)
-                continue
-
-            # Player 4 (hit)
-            if suml == 4:
-                run_count = one(player, deck, run_count)
+            # Player 4 - 8 (hit)
+            if finpoint[t] in range(4, 9):
+                player, run_count = one(player, deck, run_count, t)
                 continue
 
         # Cases for soft hands     
-        if soft == True:
+        if hs[t] == "soft":
 
             # Player 19 - 21 (stand)
-            if suml in range(19,22):
+            if finpoint[t] in range(19, 22):
                 stand = True
-                return busted, double, stand, run_count
+                return busted, double, stand, run_count, player
             
             # Player 18
-            if suml == 18:
+            if finpoint[t] == 18:
 
-                # House 2 - 6 (double)
-                if house[0] in range(2,7) and len(player) == 2:
-                    run_count = one(player,deck, run_count)
-                    double = True
-                    return busted, double, stand, run_count
-                
-                # House 7, 8 (stand)
-                if house[0] in (7,8):
+                # House 3 - 6 (double if allowed)
+                if house[0] in range(3,7):
+
+                    # Double if allowed
+                    if len(player[t]) == 2:
+                        player, run_count = one(player, deck, run_count, t)
+                        double = True
+                        return busted, double, stand, run_count, player
+
+                    # Stand
+                    else:
+                        stand = True
+                        return busted, double, stand, run_count, player
+
+                # House 2, 7 or 8 (stand)
+                elif house[0] == 2 or house[0] in (7,8):
                     stand = True
-                    return busted, double, stand, run_count
+                    return busted, double, stand, run_count, player
                 
                 # House 9 to A (hit)
-                if house[0] in (0,9,10):
-                    run_count = one(player, deck, run_count)
-                    continue
-            
-            # Player 16, 17
-            if suml in (16,17):
-
-                # House 4,5,6 (double)
-                if house[0] in range (4,7) and len(player) == 2:
-                    run_count = one(player,deck, run_count)
-                    double = True
-                    return busted, double, stand, run_count
-
-                # House 2,3 or 7 - A (hit)
                 else:
-                    run_count = one(player, deck, run_count)
+                    player, run_count = one(player, deck, run_count, t)
                     continue
             
-            # Player 13 - 15
-            if suml in range(13,16):
+            # Player 17
+            if finpoint[t] == 17:
 
-                # House 5,6 (double)
-                if house[0] in (5,6) and len(player) == 2:
-                    run_count = one(player,deck, run_count)
-                    double = True
-                    return busted, double, stand, run_count
-                
+                # House 3 - 6
+                if house[0] in range (3,7):
+
+                    # Double if allowed
+                    if len(player[t]) == 2:
+                        player, run_count = one(player, deck, run_count, t)
+                        double = True
+                        return busted, double, stand, run_count, player
+
+                    # Hit
+                    else:
+                        player, run_count = one(player, deck, run_count, t)
+                        continue
+
+                # House 2 or 7 - A (hit)
+                else:
+                    player, run_count = one(player, deck, run_count, t)
+                    continue
+
+            # Player 15, 16
+            if finpoint[t] in (15, 16):
+
+                # House 4 - 6
+                if house[0] in range (4,7):
+
+                    # Double if allowed
+                    if len(player[t]) == 2:
+                        player, run_count = one(player, deck, run_count, t)
+                        double = True
+                        return busted, double, stand, run_count, player
+
+                    # Hit
+                    else:
+                        player, run_count = one(player, deck, run_count, t)
+                        continue
+
+                # House 2, 3 or 7 - A (hit)
+                else:
+                    player, run_count = one(player, deck, run_count, t)
+                    continue
+            
+            # Player 13 - 14
+            if finpoint[t] in (13, 14):
+
+                # House 5, 6
+                if house[0] in (5, 6):
+
+                    # Double if allowed
+                    if len(player[t]) == 2:
+                        player, run_count = one(player, deck, run_count, t)
+                        double = True
+                        return busted, double, stand, run_count, player
+
+                    # Hit
+                    else:
+                        player, run_count = one(player, deck, run_count, t)
+                        continue
+
                 # House 2 - 4 or 7 - A (hit)
                 else:
-                    run_count = one(player, deck, run_count)
+                    player, run_count = one(player, deck, run_count, t)
                     continue
              
 # Deciding win or lose
-def wl(finpoint, sumh, capital, wager):
+def wl(finpoint, sumh, capital, wager, t):
 
     # Tie
-    if finpoint[0] == sumh and finpoint[0] <= 21 and sumh <= 21:
-        wager.pop(0)
-        finpoint.pop(0)
-        return capital, finpoint, wager
+    if finpoint[t] == sumh and finpoint[t] <= 21 and sumh <= 21:
+        return capital
 
     # House win
-    elif (sumh <= 21 and finpoint[0] > 21) or (sumh < 21 and sumh > finpoint[0]):
-        capital -= wager[0]
-        wager.pop(0)
-        finpoint.pop(0)
-        return capital, finpoint, wager
+    elif (sumh <= 21 and finpoint[t] > 21) or (sumh <= 21 and sumh > finpoint[t]):
+        capital -= wager[t]
+        return capital
 
     # Player win
     else:
-        capital += wager[0]
-        wager.pop(0)
-        finpoint.pop(0)
-        return capital, finpoint, wager
+        capital += wager[t]
+        return capital
 
 # House turn
 def hoturn(house, deck, run_count):
 
-    # Count revealed card
-    if house[1] in range (2,7):
+    # Count second card
+    if house[1] in range(2, 7):
         run_count += 1
-    elif house[1] in (0,10):
+    if house[1] in (0, 10):
         run_count -= 1
 
     while True:
-        suml, _, _ = handval(house)
+        sumh = hocal(house)
+        
+        # Dealer hit or stand
 
-        if suml >= 17:
+        # Stand
+        if sumh >= 17:
             return house, run_count
+
+        # Hit
         else:
-            run_count = one(house, deck, run_count)
+            h = random.choice(deck)
+            deck.remove(h)
+            house.append(h)
+            if h in range(2,7):
+                run_count += 1
+            if h in (0,10):
+                run_count -= 1
 
 # Calculate val of dealer's cards
 def hocal(house):
@@ -519,9 +578,8 @@ def hocal(house):
             return sumh
 
 # Main
-def bj(player, house, deck):
+def bj (deck):
     pnl = 0
-
     rounds = 0
     x_rounds = []
     y_pnl = []
@@ -534,8 +592,7 @@ def bj(player, house, deck):
     for i in range(3000):
 
         # Variables that need reset every round
-        stand = False
-        double = False
+        busted = False
         house_blackjack = False
         player = [[],
                   [],
@@ -545,15 +602,16 @@ def bj(player, house, deck):
         house = []
         splitace = False
         hands = 1
-        wager = []
-        finpoint = []
-        hs = []
+        wager = [0,0,0,0]
+        finpoint = [0,0,0,0]
+        hs = [0,0,0,0]
 
         # Reload the deck
         if len(deck) <= 36:
             base = [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10] # 0 is A and the 3 10s stand for JQK
             deck = base * 4 * 6
             run_count = 0
+            true_count = 0
         
         # Stop if broke
         if capital <= 10:
@@ -574,7 +632,7 @@ def bj(player, house, deck):
             h = random.choice(deck)
             deck.remove(h)
             house.append(h)
-            rounds += 1
+        rounds += 1
 
         if player[0][0] == player[0][1]:
 
@@ -585,7 +643,7 @@ def bj(player, house, deck):
                 hands, player = split(player, deck, hands)
             
             # 9
-            if player[0][0] == 9 and house[0] in range(2,10):
+            if player[0][0] == 9 and house[0] in range(2,10) and house[0] != 7:
                 hands, player = split(player, deck, hands)
 
             # 2, 3 and 7
@@ -622,8 +680,9 @@ def bj(player, house, deck):
         bet = capital * risk
 
         # Place the wager(s)
-        for w in range(0, hands):
-            wager.append(bet)
+        for w in range(0, len(player)):
+            if len(player[w]) > 0: 
+                wager[w] = bet
 
         # Loop through the hands for card counting
         for o in range(0, hands):
@@ -649,43 +708,65 @@ def bj(player, house, deck):
         if house[0] == 0 and true_count >= 3:
             insurance = True
 
+        # Check for dealer's blackjack
+        if sum(house) == 10 and 10 in house:
+            house_blackjack = True
+            # Count the second card in dealer's hand
+            run_count -= 1
+
+        # Insurance cases
+        if insurance == True:
+            if house_blackjack == True:
+                capital += bet
+            else:
+                capital -= bet * 0.5
+
+        # Calculate hand
+        for m in range(0, len(player)):
+            if len(player[m]) > 0:
+                finpoint, hs = handval(m, player, hs, finpoint)
+
+        # If split aces case
+        if splitace == True:
+            
+            # Instantly lose all if dealer have a blackjack
+            if house_blackjack == True:
+                capital -= bet * hands
+                continue
+
+            # House turn
+            house, run_count = hoturn(house, deck, run_count)
+            sumh = hocal(house)
+
+            for a in range(0, len(player)):
+
+                if len(player[a]) > 0: 
+                    capital = wl(finpoint, sumh, capital, wager, a)
+                    
+            continue
+
         #===============================================================#
         #=======================BLACK JACK CASES========================#
         #===============================================================#
 
-        if sum(house) == 10 and 10 in house:
-            house_blackjack = True
+        for b in range(0, len(player)):
+            if len(player[b]) > 0:
+                player_blackjack = False
 
-            # Count the second card in dealer's hand
-            run_count -= 1
+                # Check if hand bj or not
+                if sum(player[b]) == 10 and 10 in player[b]:
+                    player_blackjack = True
+                
+                # Player win bj
+                if player_blackjack == True and house_blackjack == False:
+                    capital += wager[b] * 1.5 
+                    player[b] = []
 
-        for b in range(0, hands):
-            player_blackjack = False
+                # Dealer win bj
+                if house_blackjack == True and player_blackjack == False:
+                    capital -= wager[b]
 
-            # Check if hand bj or not
-            if sum(player[b]) == 10 and 10 in player[b]:
-                player_blackjack = True
-
-            # Insurance cases
-            if insurance == True:
-                if house_blackjack == True:
-                    capital += bet
-                else:
-                    capital -= bet * 0.5
-            
-            # Player win bj
-            if player_blackjack == True and house_blackjack == False:
-                capital += 1.5
-                player.pop(b)
-                player.append([])
-                wager.pop(b)
-                hands -= 1
-
-            # Dealer win bj
-            if house_blackjack == True and player_blackjack == False:
-                capital -= 1
-
-        # Continue if dealer got bj
+        # End of round if dealer got bj
         if house_blackjack == True:
             continue
 
@@ -694,54 +775,93 @@ def bj(player, house, deck):
         #===============================================================#
         
 
+    
 
 
 
+        # Loop for the main actions
+        for t in range(0, len(player)):
 
+            stand = False
+            double = False
 
-        # Calculate and check if hand hard or soft
-        for m in range(0, hands):
-            finpoint, hs = handval(m, player, hs, finpoint)
+            if len(player[t]) > 0:
+                # If hard hands, check illustrious 18
+                if 0 not in player[t]:
+                    double, stand, run_count, player = specstrat(player, house, deck, double, stand, run_count, finpoint, t)
 
+                    # End player's turn
+                    if stand == True or double == True:
 
-        # If split aces case
-        if splitace == True:
+                        # Double the bet
+                        if double == True:
+                            wager[t] = bet * 2
 
-            # House turn
-            house, run_count = hoturn(house, deck, run_count)
-            sumh = hocal(house)
+                        # Calculate player's hand
+                        finpoint, hs = handval(t, player, hs, finpoint)
 
-            for a in range(0, hands):
+                        # House turn
+                        house, run_count = hoturn(house, deck, run_count)
+                        sumh = hocal(house)
 
-                # Tie
-                if finpoint[a] == sumh:
-                    player.pop(0)
-                    wager.pop(0)
-                    finpoint.pop(0)
-                    hands -= 1
+                        # Decide win or lose
+                        capital = wl(finpoint, sumh, capital, wager, t)
 
-                # Player win
-                if finpoint[a] > sumh and finpoint[a] <= 21:
-                    capital += wager[0]
-                    player.pop(0)
-                    wager.pop(0)
-                    finpoint.pop(0)
-                    hands -= 1
+                    else:
 
-                # House win
-                if finpoint[a] < sumh and sumh <= 21:
-                    capital += wager[0]
-                    player.pop(0)
-                    wager.pop(0)
-                    finpoint.pop(0)
-                    hands -= 1
-            continue
+                        # Check basic strat
+                        busted, double, stand, run_count, player = basicstrat(player, deck, house, run_count, stand, double, finpoint, hs, t)
 
+                        # End player's turn
 
+                        # Busted
+                        if busted == True:
+                            capital -= wager[t]
 
+                        # Double or stand
+                        if double == True or stand == True:
 
+                            # Double the bet
+                            if double == True:
+                                wager[t] = bet * 2
+                            
+                            # Calculate player's hand
+                            finpoint, hs = handval(t, player, hs, finpoint)
 
-        
+                            # House turn
+                            house, run_count = hoturn(house, deck, run_count)
+                            sumh = hocal(house)
+
+                            # Decide win or lose
+                            capital = wl(finpoint, sumh, capital, wager, t)
+                else:
+                
+                    # Check basic strat
+                    busted, double, stand, run_count, player = basicstrat(player, deck, house, run_count, stand, double, finpoint, hs, t)
+
+                    # End player's turn
+
+                    # Busted
+                    if busted == True:
+                        capital -= wager[t]
+
+                    # Double or stand
+                    if double == True or stand == True:
+
+                        # Double the bet
+                        if double == True:
+                            wager[t] = bet * 2
+                        
+                        # Calculate player's hand
+                        finpoint, hs = handval(t, player, hs, finpoint)
+
+                        # House turn
+                        house, run_count = hoturn(house, deck, run_count)
+                        sumh = hocal(house)
+
+                        # Decide win or lose
+                        capital = wl(finpoint, sumh, capital, wager, t)
+
         
         # Calculate pnl
         if rounds % 5 == 0:
@@ -772,4 +892,4 @@ def bj(player, house, deck):
     plt.legend()
     plt.show()
             
-bj(player, house, deck)
+print(bj(deck))
