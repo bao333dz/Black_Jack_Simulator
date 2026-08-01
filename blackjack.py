@@ -583,7 +583,7 @@ def bj (deck):
     run_count = 0
     true_count = 0
 
-    for i in range(100000):
+    for i in range(300000):
 
         # Variables that need reset every round
         busted = False
@@ -984,5 +984,5 @@ def bj (deck):
 
     plt.legend()
     plt.show()
-            
+
 print(bj(deck))
